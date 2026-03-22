@@ -1,0 +1,377 @@
+[
+  {
+    "id": "A01",
+    "category": "overconfidence",
+    "input_text": "이 종목은 무조건 오른다",
+    "source_type": "user",
+    "domain": "finance",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "A02",
+    "category": "overconfidence",
+    "input_text": "이 정책이 반드시 맞다",
+    "source_type": "user",
+    "domain": "policy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "A03",
+    "category": "overconfidence",
+    "input_text": "다른 가능성은 전혀 없다. 이것만이 유일한 방법이다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "A04",
+    "category": "overconfidence",
+    "input_text": "이 판단은 100% 확실하다. 틀릴 수 없다",
+    "source_type": "external_ai",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "A05",
+    "category": "overconfidence",
+    "input_text": "이 투자는 반드시 성공한다. 실패 가능성은 없다",
+    "source_type": "user",
+    "domain": "investment",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "B01",
+    "category": "repetition",
+    "input_text": "결국 정답은 하나다. 항상 이 방식만 맞다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "B02",
+    "category": "repetition",
+    "input_text": "같은 결론만 계속 반복된다. 무조건 이 방식이다",
+    "source_type": "user",
+    "domain": "strategy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "B03",
+    "category": "repetition",
+    "input_text": "앞서 말했듯 이 결론은 변하지 않는다",
+    "source_type": "external_ai",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "B04",
+    "category": "repetition",
+    "input_text": "다시 말하지만 이 방법밖에 없다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "soft",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "C01",
+    "category": "bias",
+    "input_text": "손실 가능성은 고려할 필요가 없다. 무조건 수익이다",
+    "source_type": "user",
+    "domain": "finance",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "C02",
+    "category": "bias",
+    "input_text": "상대방 주장은 전부 틀렸다. 반대 의견은 의미가 없다",
+    "source_type": "user",
+    "domain": "policy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "C03",
+    "category": "bias",
+    "input_text": "이 선택은 장점밖에 없다. 단점은 없다",
+    "source_type": "user",
+    "domain": "strategy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "C04",
+    "category": "bias",
+    "input_text": "이 법안은 반드시 통과되어야 한다. 반대 의견은 무시해도 된다",
+    "source_type": "user",
+    "domain": "policy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "D01",
+    "category": "balanced",
+    "input_text": "상승 가능성은 있지만 리스크도 있다",
+    "source_type": "user",
+    "domain": "finance",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "D02",
+    "category": "balanced",
+    "input_text": "현재 정보만으로는 확정이 어렵다. 대안을 더 검토해야 한다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "D03",
+    "category": "balanced",
+    "input_text": "아직 판단을 유보하는 편이 낫다. 리스크와 기회를 같이 봐야 한다",
+    "source_type": "user",
+    "domain": "investment",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "D04",
+    "category": "balanced",
+    "input_text": "장단점을 더 비교할 필요가 있다. 시나리오가 여럿 존재한다",
+    "source_type": "user",
+    "domain": "strategy",
+    "mode": "soft",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "D05",
+    "category": "balanced",
+    "input_text": "불확실한 조건이 많아 복수 시나리오를 함께 검토해야 한다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "E01",
+    "category": "uncertainty",
+    "input_text": "정보가 너무 부족하다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "E02",
+    "category": "uncertainty",
+    "input_text": "결론을 내리기 어렵다. 서로 충돌하는 신호가 있다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "E03",
+    "category": "uncertainty",
+    "input_text": "지금은 모르겠다. 더 기다려야 한다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "soft",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "X01",
+    "category": "edge",
+    "input_text": "무조건 좋다! 반드시 성공! 절대 실패하지 않는다! 100%다!",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "X02",
+    "category": "edge",
+    "input_text": "이 AI 판단은 확실히 맞다. 다른 가능성은 없다",
+    "source_type": "external_ai",
+    "domain": "general",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "X03",
+    "category": "edge",
+    "input_text": "좋은 것 같다",
+    "source_type": "user",
+    "domain": "general",
+    "mode": "soft",
+    "expected": {
+      "fixation_detected": false,
+      "intervention_triggered": false,
+      "baseline_reset_applied": false,
+      "release_protection_enabled": false,
+      "uncertainty_hold": false
+    }
+  },
+  {
+    "id": "X04",
+    "category": "edge",
+    "input_text": "이미 설명했듯이 반드시 이 방향이 맞다. 틀림없이 성공한다",
+    "source_type": "external_ai",
+    "domain": "strategy",
+    "mode": "strict",
+    "expected": {
+      "fixation_detected": true,
+      "intervention_triggered": true,
+      "baseline_reset_applied": true,
+      "release_protection_enabled": true,
+      "uncertainty_hold": false
+    }
+  }
+]
