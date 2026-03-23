@@ -1,101 +1,275 @@
 ﻿from __future__ import annotations
-import re
-from datetime import datetime, timezone
 
+import re
+from typing import List, Tuple
+
+# ── 확신형 ───────────────────────────────────────────────────────────────────
 OVERCONFIDENCE_PATTERNS = [
-    r"무조건", r"반드시", r"확실히", r"100%", r"틀림없이", r"절대로?",
-    r"당연히", r"분명히", r"명백히", r"확신한다", r"확신합니다",
-    r"의심할 여지가 없", r"오류가 없",
-    r"guaranteed", r"definitely", r"only outcome",
+    r"무조건",
+    r"반드시",
+    r"절대",
+    r"확실히",
+    r"틀림없이",
+    r"100%",
+    r"\bdefinitely\b",
+    r"\bguaranteed\b",
+    r"\bonly outcome\b",
 ]
 
 REPETITION_PATTERNS = [
-    r"(같은 말|반복하지만|앞서 말했듯|다시 말하지만)",
-    r"이미 설명했듯", r"처음에 말한 것처럼",
-    r"\b(always|never)\b",
-]
-
-COUNTER_FAILURE_PATTERNS = [
-    r"다른 방법은 없", r"대안이 없", r"이것만이", r"유일한 방법",
-    r"다른 선택지가 없", r"다른 가능성은",
-    r"전혀 없다", r"밖에 없다", r"만이 정답", r"하나다",
-    r"전부 틀", r"모두 틀", r"의미가 없다", r"고려할 필요가 없",
-    r"장점밖에", r"단점은 없",
+    r"(같은 말|반복)",
+    r"\balways\b",
+    r"\bnever\b",
 ]
 
 ALTERNATIVE_HINTS = [
-    r"가능성", r"리스크", r"대안", r"반대", r"조건", r"불확실",
-    r"risk", r"alternative", r"scenario", r"uncertain",
+    r"가능성",
+    r"리스크",
+    r"대안",
+    r"반대",
+    r"조건",
+    r"uncertain",
+    r"risk",
+    r"alternative",
+    r"scenario",
 ]
 
-WEIGHTS = {
-    "overconfidence":       0.35,
-    "repetition_pattern":   0.15,
-    "counter_failure":      0.30,
-    "lack_of_alternatives": 0.15,
-    "single_path_judgment": 0.05,
-    "intensifier":          0.05,
-}
+# ── 편향형 ───────────────────────────────────────────────────────────────────
+GROUP_GENERALIZATION_PATTERNS = [
+    r"사람들은",
+    r"그들은",
+    r"저쪽은",
+    r"지지자들은",
+    r"반대하는 사람들은",
+    r"모두",
+    r"전부",
+]
 
-FIXATION_THRESHOLD = 0.35
-UNCERTAINTY_THRESHOLD = 1.1
+HOSTILE_ATTRIBUTION_PATTERNS = [
+    r"갈라치기",
+    r"선동",
+    r"조작",
+    r"속이려",
+    r"일부러",
+    r"악의적",
+]
 
+POLITICAL_BIAS_PATTERNS = [
+    r"문재인",
+    r"윤석열",
+    r"이재명",
+    r"보수",
+    r"진보",
+    r"좌파",
+    r"우파",
+    r"정권",
+    r"정치",
+]
 
-def _match(patterns, text):
+# ── 기억형 ───────────────────────────────────────────────────────────────────
+MEMORY_PATTERNS = [
+    r"원래 .* 사람",
+    r"좋은 사람",
+    r"착한 사람",
+    r"믿을 수 있는 사람",
+    r"예전에 .*",
+    r"그동안 .*",
+    r"항상 .*",
+    r"지금까지 .*",
+    r"오래 알아서",
+    r"친해서",
+    r"잘 알아서",
+    r"그럴 리 없다",
+    r"아닐 것이다",
+    r"그런 사람 아니다",
+]
+
+# ── 순서 위반형 ──────────────────────────────────────────────────────────────
+CURRENT_PATTERNS = [
+    r"지금",
+    r"현재",
+    r"이번",
+    r"오늘",
+    r"방금",
+    r"이번 일",
+    r"실제로",
+    r"확인",
+    r"사실",
+]
+
+PAST_PATTERNS = [
+    r"원래",
+    r"예전",
+    r"그동안",
+    r"지금까지",
+    r"본래",
+    r"예전에도",
+    r"좋은 사람",
+    r"착한 사람",
+    r"믿을 수 있는 사람",
+    r"그런 사람 아니다",
+]
+
+SUSPEND_PATTERNS = [
+    r"확인해",
+    r"확인이 필요",
+    r"더 봐야",
+    r"모른다",
+    r"가능성",
+    r"단정하기 어렵",
+    r"보류",
+]
+
+CONCLUSION_PATTERNS = [
+    r"그럴 리 없다",
+    r"문제없다",
+    r"틀림없다",
+    r"맞다",
+    r"갈라치기",
+    r"선동",
+    r"조작",
+    r"아닐 것이다",
+]
+
+# ── 공통 헬퍼 ────────────────────────────────────────────────────────────────
+def _contains_any(patterns: List[str], text: str) -> bool:
     return any(re.search(p, text, flags=re.IGNORECASE) for p in patterns)
 
 
-def detect_fixation(input_text):
+# ── 기억 고착 탐지 ───────────────────────────────────────────────────────────
+def detect_memory_fixation(text: str) -> Tuple[float, List[str]]:
+    score = 0.0
+    signals: List[str] = []
+
+    for pattern in MEMORY_PATTERNS:
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            score += 0.15
+            if "memory_fixation" not in signals:
+                signals.append("memory_fixation")
+
+    if re.search(r"그럴 리 없다|아닐 것이다", text, flags=re.IGNORECASE):
+        score += 0.20
+        signals.append("counterevidence_block")
+
+    return min(score, 1.0), signals
+
+
+# ── 편향 탐지 ────────────────────────────────────────────────────────────────
+def detect_bias_fixation(text: str) -> Tuple[float, List[str]]:
+    score = 0.0
+    signals: List[str] = []
+
+    has_group = _contains_any(GROUP_GENERALIZATION_PATTERNS, text)
+    has_hostile = _contains_any(HOSTILE_ATTRIBUTION_PATTERNS, text)
+    has_political = _contains_any(POLITICAL_BIAS_PATTERNS, text)
+
+    if has_group:
+        score += 0.20
+        signals.append("group_generalization")
+
+    if has_hostile:
+        score += 0.20
+        signals.append("hostile_attribution")
+
+    if has_political:
+        score += 0.10
+        signals.append("political_bias_frame")
+
+    return min(score, 1.0), signals
+
+
+# ── 순서 위반 탐지 ───────────────────────────────────────────────────────────
+def detect_order_violation(input_text: str) -> Tuple[float, List[str]]:
     text = input_text.strip()
     score = 0.0
-    signals = []
+    signals: List[str] = []
 
-    if _match(OVERCONFIDENCE_PATTERNS, text):
-        score += WEIGHTS["overconfidence"]
+    has_current = _contains_any(CURRENT_PATTERNS, text)
+    has_past = _contains_any(PAST_PATTERNS, text)
+    has_suspend = _contains_any(SUSPEND_PATTERNS, text)
+    has_conclusion = _contains_any(CONCLUSION_PATTERNS, text)
+
+    if has_past:
+        score += 0.15
+        signals.append("past_anchor")
+
+    if not has_current and has_conclusion:
+        score += 0.20
+        signals.append("current_omission")
+
+    if not has_suspend and has_conclusion:
+        score += 0.20
+        signals.append("no_suspension")
+
+    if has_past and has_conclusion:
+        score += 0.20
+        signals.append("memory_to_conclusion")
+
+    return min(score, 1.0), signals
+
+
+# ── 최종 통합 탐지 ───────────────────────────────────────────────────────────
+def detect_fixation(input_text: str) -> Tuple[float, List[str]]:
+    text = input_text.strip()
+    lowered = text.lower()
+    score = 0.0
+    signals: List[str] = []
+
+    # 1) 확신형
+    if _contains_any(OVERCONFIDENCE_PATTERNS, text):
+        score += 0.35
         signals.append("overconfidence")
 
-    if _match(REPETITION_PATTERNS, text):
-        score += WEIGHTS["repetition_pattern"]
+    if _contains_any(REPETITION_PATTERNS, text):
+        score += 0.15
         signals.append("repetition_pattern")
 
-    if _match(COUNTER_FAILURE_PATTERNS, text):
-        score += WEIGHTS["counter_failure"]
-        signals.append("counter_failure")
-
-    if len(text) > 5 and not _match(ALTERNATIVE_HINTS, text):
-        score += WEIGHTS["lack_of_alternatives"]
+    if len(text) > 5 and not _contains_any(ALTERNATIVE_HINTS, text):
+        score += 0.25
         signals.append("lack_of_alternatives")
 
     if len(text.split()) <= 8:
-        score += WEIGHTS["single_path_judgment"]
+        score += 0.15
         signals.append("single_path_judgment")
 
-    if text.count("!") >= 1:
-        score += WEIGHTS["intensifier"]
+    if lowered.count("!") >= 1:
+        score += 0.05
         signals.append("intensifier")
 
-    return min(round(score, 4), 1.0), signals
+    # 2) 편향형
+    bias_score, bias_signals = detect_bias_fixation(text)
+    score += bias_score
+    signals.extend(bias_signals)
 
+    # 3) 기억형
+    memory_score, memory_signals = detect_memory_fixation(text)
+    score += memory_score
+    signals.extend(memory_signals)
 
-def is_fixated(score):
-    return score >= FIXATION_THRESHOLD
+    # 4) 순서 위반형
+    order_score, order_signals = detect_order_violation(text)
+    score += order_score
+    signals.extend(order_signals)
 
+    # 5) 조합 가산점
+    combo_bonus = 0.0
 
-def build_seed(input_text, domain):
-    text = input_text.strip()
-    words = text.split()
-    claim_type = "neutral"
-    if re.search(r"오른다|상승|좋다|bull|buy|increase", text, re.IGNORECASE):
-        claim_type = "positive_assertion"
-    elif re.search(r"내린다|하락|나쁘다|bear|sell|decrease", text, re.IGNORECASE):
-        claim_type = "negative_assertion"
-    confidence = "high" if re.search(r"무조건|반드시|확실히|절대|100%", text) else "medium"
-    return {
-        "domain": domain,
-        "claim_type": claim_type,
-        "confidence": confidence,
-        "input_length": len(text),
-        "keyword_count": len(words),
-        "condition_snapshot": text[:120] + ("..." if len(text) > 120 else ""),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    if "memory_fixation" in signals and "counterevidence_block" in signals:
+        combo_bonus += 0.15
+
+    if "past_anchor" in signals and "memory_to_conclusion" in signals:
+        combo_bonus += 0.15
+
+    if "group_generalization" in signals and "hostile_attribution" in signals:
+        combo_bonus += 0.15
+
+    if "overconfidence" in signals and "single_path_judgment" in signals:
+        combo_bonus += 0.10
+
+    # 6) 최종 점수 정리
+    score = min(round(score + combo_bonus, 2), 1.0)
+
+    # 7) 중복 제거
+    signals = list(dict.fromkeys(signals))
+
+    return score, signals
