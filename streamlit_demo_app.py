@@ -43,7 +43,7 @@ h1 {
 
 [data-testid="stMetricValue"] {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 1.4rem !important;
+    font-size: 1.35rem !important;
     color: #ffffff !important;
 }
 
@@ -58,10 +58,10 @@ h1 {
     background: #13131a !important;
     border: 1px solid #2a2a3a !important;
     color: #e8e8f0 !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     font-family: 'IBM Plex Sans KR', sans-serif !important;
-    font-size: 0.9rem !important;
-    padding: 0.6rem 1.2rem !important;
+    font-size: 0.92rem !important;
+    padding: 0.65rem 1.1rem !important;
     transition: all 0.15s !important;
 }
 
@@ -108,8 +108,8 @@ h1 {
     border-radius: 8px;
     padding: 1.2rem 1.4rem;
     margin: 0.5rem 0 1rem 0;
-    font-size: 1.05rem;
-    line-height: 1.6;
+    font-size: 1.02rem;
+    line-height: 1.65;
 }
 
 .path-card {
@@ -118,14 +118,14 @@ h1 {
     border-left: 3px solid #5b8cff;
     border-radius: 8px;
     padding: 1rem 1.2rem;
-    margin: 0.8rem 0 1rem 0;
+    margin: 0.85rem 0 1rem 0;
 }
 
 .path-title {
     font-size: 1rem;
     font-weight: 600;
     color: #ffffff;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
 }
 
 .path-summary {
@@ -134,9 +134,9 @@ h1 {
     border-left: 3px solid #44ff88;
     border-radius: 8px;
     padding: 1rem 1.2rem;
-    margin: 0.4rem 0 0.8rem 0;
+    margin: 0.45rem 0 0.9rem 0;
     font-size: 1rem;
-    line-height: 1.6;
+    line-height: 1.65;
 }
 
 .signal-tag {
@@ -147,7 +147,7 @@ h1 {
     padding: 0.2rem 0.6rem;
     font-size: 0.78rem;
     color: #cc88ff;
-    margin: 0.2rem 0.2rem 0.2rem 0;
+    margin: 0.2rem 0.25rem 0.2rem 0;
     font-family: 'IBM Plex Mono', monospace;
 }
 
@@ -155,14 +155,22 @@ h1 {
     background: #1a1a2a;
     border-radius: 4px;
     height: 6px;
-    margin: 0.5rem 0 1rem 0;
+    margin: 0.55rem 0 0.9rem 0;
     overflow: hidden;
 }
 
 .score-bar-fill {
     height: 100%;
     border-radius: 4px;
-    transition: width 0.4s ease;
+    transition: width 0.35s ease;
+}
+
+.risk-box {
+    background: #111117;
+    border: 1px solid #242438;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin: 0.4rem 0 0.8rem 0;
 }
 
 .rule-item {
@@ -176,14 +184,22 @@ h1 {
     unsafe_allow_html=True,
 )
 
-# ── 헬퍼 ─────────────────────────────────────────────────────────────────────
+# ── 신호 번역 ────────────────────────────────────────────────────────────────
 SIGNAL_KO = {
     "overconfidence": "과도한 확신",
     "single_path_judgment": "단일 경로 판단",
     "lack_of_alternatives": "대안 부족",
     "repetition_pattern": "반복 패턴",
-    "counter_failure": "반대 가설 생성 실패",
     "intensifier": "강한 단정 표현",
+    "group_generalization": "집단 일반화",
+    "hostile_attribution": "적대적 동기 단정",
+    "political_bias_frame": "정치적 편향 프레임",
+    "memory_fixation": "과거 인상 고정",
+    "counterevidence_block": "반증 차단",
+    "past_anchor": "과거 기억이 현재보다 먼저 작동함",
+    "current_omission": "현재 확인 단계가 생략됨",
+    "no_suspension": "판단 유보 없이 결론으로 이동함",
+    "memory_to_conclusion": "과거 인상이 즉시 결론으로 연결됨",
 }
 
 FOLLOWUPS = [
@@ -192,7 +208,7 @@ FOLLOWUPS = [
     "이 선택이 정답이다",
 ]
 
-
+# ── 헬퍼 ─────────────────────────────────────────────────────────────────────
 def translate_signal(signal: str) -> str:
     return SIGNAL_KO.get(signal, signal)
 
@@ -215,13 +231,6 @@ def score_color(score: float) -> str:
     return "#ff4444"
 
 
-def normalize_scenarios(data: dict) -> list[dict]:
-    scenarios = data.get("scenarios", [])
-    if isinstance(scenarios, list) and scenarios:
-        return scenarios
-    return []
-
-
 def render_score_bar(score: float) -> None:
     color = score_color(score)
     width = min(max(score * 100, 0), 100)
@@ -233,16 +242,83 @@ def render_score_bar(score: float) -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.caption("점수가 높을수록 확신/고착 위험이 큽니다.")
+    st.caption("점수가 높을수록 확신/편향/기억 고착 위험이 큽니다.")
 
 
-def render_signal_tags(signals: list[str]) -> None:
-    if not signals:
+def normalize_scenarios(data: dict) -> list[dict]:
+    scenarios = data.get("scenarios", [])
+    if isinstance(scenarios, list) and scenarios:
+        return scenarios
+    return []
+
+
+def risk_level(count: int) -> str:
+    if count == 0:
+        return "낮음"
+    if count == 1:
+        return "주의"
+    if count <= 3:
+        return "높음"
+    return "매우 높음"
+
+
+def group_signals(signals: list[str]) -> dict:
+    groups = {
+        "확신 위험": [],
+        "편향 위험": [],
+        "기억 위험": [],
+    }
+
+    confidence = {
+        "overconfidence",
+        "single_path_judgment",
+        "lack_of_alternatives",
+        "repetition_pattern",
+        "intensifier",
+    }
+    bias = {
+        "group_generalization",
+        "hostile_attribution",
+        "political_bias_frame",
+    }
+    memory = {
+        "memory_fixation",
+        "counterevidence_block",
+        "past_anchor",
+        "current_omission",
+        "no_suspension",
+        "memory_to_conclusion",
+    }
+
+    for sig in signals:
+        if sig in confidence:
+            groups["확신 위험"].append(sig)
+        elif sig in bias:
+            groups["편향 위험"].append(sig)
+        elif sig in memory:
+            groups["기억 위험"].append(sig)
+
+    return groups
+
+
+def render_risk_structure(signals: list[str]) -> None:
+    grouped = group_signals(signals)
+    has_any = any(grouped.values())
+
+    if not has_any:
         return
-    tags = " ".join(
-        f'<span class="signal-tag">{translate_signal(sig)}</span>' for sig in signals
-    )
-    st.markdown(f"**감지된 신호** &nbsp; {tags}", unsafe_allow_html=True)
+
+    st.markdown("### 🚨 감지된 위험 구조")
+
+    for title, items in grouped.items():
+        if not items:
+            continue
+
+        st.markdown(f"**{title} · {risk_level(len(items))}**")
+        st.markdown('<div class="risk-box">', unsafe_allow_html=True)
+        for item in items:
+            st.write(f"- {translate_signal(item)}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_scenario_card(scenario: dict) -> None:
@@ -289,7 +365,7 @@ with st.sidebar:
 st.markdown("# Decision Reset")
 st.markdown(
     "<p style='color:#6b6b8a; margin-top:-0.5rem; margin-bottom:1.5rem; font-size:0.95rem;'>"
-    "확신에 갇힌 판단을 깨고, 복수의 판단 경로를 이유와 조건과 함께 제시합니다"
+    "고착된 판단을 감지하고, 복수의 판단 경로를 이유와 조건과 함께 제시합니다"
     "</p>",
     unsafe_allow_html=True,
 )
@@ -355,13 +431,13 @@ if run_analyze or run_reset:
                 c3.metric("권장 조치", "리셋" if detected else "유지")
 
                 render_score_bar(score)
-                render_signal_tags(signals)
+                render_risk_structure(signals)
 
                 if detected:
-                    st.warning("👉 이 판단은 확신 또는 단일 결론에 고착된 상태였습니다.")
+                    st.warning("👉 이 판단은 확신, 편향, 또는 기억 고착이 개입된 상태였습니다.")
                 else:
                     st.success("👉 이 판단은 현재 고착되지 않은 상태입니다.")
-                    st.caption("확신 표현이 낮고, 단일 결론 구조가 강하게 감지되지 않았습니다.")
+                    st.caption("현재 확인이 유지되고 있고, 단일 결론으로 급히 닫히는 구조가 강하지 않습니다.")
 
                 with st.expander("상세 데이터"):
                     st.json(data)
@@ -380,15 +456,15 @@ if run_analyze or run_reset:
                 c3.metric("개입 여부", "리셋 적용" if detected else "유지")
 
                 render_score_bar(score)
-                render_signal_tags(signals)
+                render_risk_structure(signals)
 
                 st.markdown("### 🔄 판단 변화")
 
                 if detected:
-                    st.warning("👉 이 판단은 확신/단일 경로에 고착된 상태였습니다.")
+                    st.warning("👉 이 판단은 현재보다 과거 기억, 편향, 또는 단정적 결론이 먼저 작동한 상태였습니다.")
                 else:
                     st.success("👉 이 판단은 현재 고착되지 않은 상태입니다. 그래도 복수 경로를 비교해볼 수 있습니다.")
-                    st.caption("확신 표현이 낮고, 단일 결론 구조가 강하게 감지되지 않았습니다.")
+                    st.caption("현재 확인을 우선하면서도 다른 선택 경로를 함께 검토할 수 있습니다.")
 
                 st.markdown("### 🧠 재구성된 판단 경로")
                 st.caption("아래 경로들은 서로 다른 판단 기준을 반영합니다. 어떤 경로를 선택할지는 당신의 우선순위와 조건에 따라 달라집니다.")
@@ -437,7 +513,7 @@ st.divider()
 st.markdown(
     """
 <p style='color:#3a3a5a; font-size:0.78rem; text-align:center; font-family:"IBM Plex Mono", monospace;'>
-Decision Reset API — fixation detection · dependency cut · scenario-based reconstruction
+Decision Reset API — fixation detection · current-first review · scenario-based reconstruction
 </p>
 """,
     unsafe_allow_html=True,
