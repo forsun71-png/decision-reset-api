@@ -98,3 +98,4 @@ class ResetResponse(BaseModel):
     outputs:              list[str]
     release_protection:   ReleaseProtection
     llm_polish_applied:   bool = False     # LLM 표현 보정 적용 여부
+    scenarios:            list[dict] = []  # 경로형 재구성 결과 (A안/B안/C안)
