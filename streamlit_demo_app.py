@@ -43,7 +43,7 @@ h1 {
 
 [data-testid="stMetricValue"] {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 1.35rem !important;
+    font-size: 1.2rem !important;
     color: #ffffff !important;
 }
 
@@ -139,18 +139,6 @@ h1 {
     line-height: 1.65;
 }
 
-.signal-tag {
-    display: inline-block;
-    background: #1a1020;
-    border: 1px solid #3a1a4a;
-    border-radius: 4px;
-    padding: 0.2rem 0.6rem;
-    font-size: 0.78rem;
-    color: #cc88ff;
-    margin: 0.2rem 0.25rem 0.2rem 0;
-    font-family: 'IBM Plex Mono', monospace;
-}
-
 .score-bar-bg {
     background: #1a1a2a;
     border-radius: 4px;
@@ -184,7 +172,7 @@ h1 {
     unsafe_allow_html=True,
 )
 
-# ── 신호 번역 ────────────────────────────────────────────────────────────────
+# ── 번역 맵 ──────────────────────────────────────────────────────────────────
 SIGNAL_KO = {
     "overconfidence": "과도한 확신",
     "single_path_judgment": "단일 경로 판단",
@@ -200,6 +188,21 @@ SIGNAL_KO = {
     "current_omission": "현재 확인 단계가 생략됨",
     "no_suspension": "판단 유보 없이 결론으로 이동함",
     "memory_to_conclusion": "과거 인상이 즉시 결론으로 연결됨",
+}
+
+STAGE_KO = {
+    "none": "정상",
+    "early": "고착 초기",
+    "progressing": "고착 진행",
+    "deep": "고착 심화",
+    "severe": "강한 고착",
+}
+
+MODE_KO = {
+    "expand": "확장 응답",
+    "guide": "유도 응답",
+    "step_back": "후퇴",
+    "close": "응답 종료",
 }
 
 FOLLOWUPS = [
@@ -242,7 +245,7 @@ def render_score_bar(score: float) -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.caption("점수가 높을수록 확신/편향/기억 고착 위험이 큽니다.")
+    st.caption("점수가 높을수록 확신·편향·기억 고착 위험이 큽니다.")
 
 
 def normalize_scenarios(data: dict) -> list[dict]:
@@ -304,16 +307,13 @@ def group_signals(signals: list[str]) -> dict:
 def render_risk_structure(signals: list[str]) -> None:
     grouped = group_signals(signals)
     has_any = any(grouped.values())
-
     if not has_any:
         return
 
     st.markdown("### 🚨 감지된 위험 구조")
-
     for title, items in grouped.items():
         if not items:
             continue
-
         st.markdown(f"**{title} · {risk_level(len(items))}**")
         st.markdown('<div class="risk-box">', unsafe_allow_html=True)
         for item in items:
@@ -349,6 +349,30 @@ def render_scenario_card(scenario: dict) -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def render_stage_message(stage: str, reset_mode: bool = False) -> None:
+    if not reset_mode:
+        if stage == "none":
+            st.success("👉 현재 판단은 비교적 열려 있습니다.")
+        elif stage == "early":
+            st.warning("👉 고착이 시작되는 초기 신호가 보입니다.")
+        elif stage == "progressing":
+            st.warning("👉 고착이 진행 중입니다. 단일 결론으로 닫히고 있습니다.")
+        elif stage == "deep":
+            st.error("👉 고착이 심화되고 있습니다. 현재보다 기억이나 편향이 먼저 작동합니다.")
+        elif stage == "severe":
+            st.error("👉 강한 고착 상태입니다. 즉시 판단보다 중단과 재확인이 우선입니다.")
+    else:
+        if stage == "none":
+            st.success("👉 지금은 고착이 거의 없는 상태입니다.")
+        elif stage == "early":
+            st.warning("👉 고착 초기입니다. 지금 개입하면 더 깊어지기 전에 멈출 수 있습니다.")
+        elif stage == "progressing":
+            st.warning("👉 고착이 진행 중입니다. 복수 경로 비교가 필요합니다.")
+        elif stage == "deep":
+            st.error("👉 고착이 심화되었습니다. 과거 기억이나 편향이 현재보다 먼저 작동합니다.")
+        elif stage == "severe":
+            st.error("👉 강한 고착 상태입니다. 지금은 설명보다 후퇴 또는 종료가 적절할 수 있습니다.")
+
 # ── 사이드바 ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("#### ⚙️ 설정")
@@ -365,14 +389,14 @@ with st.sidebar:
 st.markdown("# Decision Reset")
 st.markdown(
     "<p style='color:#6b6b8a; margin-top:-0.5rem; margin-bottom:1.5rem; font-size:0.95rem;'>"
-    "고착된 판단을 감지하고, 상황에 따라 확장·유도·후퇴·종료를 결정합니다"
+    "고착된 판단을 감지하고, 단계와 응대 모드에 따라 확장·유도·후퇴·종료를 결정합니다"
     "</p>",
     unsafe_allow_html=True,
 )
 
 default_text = st.session_state.get("example_text", "")
 
-st.info("확신하거나 단정적인 문장, 또는 열린 질문을 입력해보세요")
+st.info("확신하거나 단정적인 문장, 또는 열린 질문을 입력해보세요.")
 
 input_text = st.text_area(
     "판단 또는 질문을 입력하세요",
@@ -423,21 +447,18 @@ if run_analyze or run_reset:
             if run_analyze:
                 score = data.get("fixation_score", data.get("score", 0.0))
                 detected = data.get("fixation_detected", False)
+                stage = data.get("fixation_stage", "none")
                 signals = data.get("signals", [])
 
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
                 c1.metric("고착 감지", "감지됨" if detected else "정상")
                 c2.metric("고착 점수", f"{score:.2f}")
-                c3.metric("권장 조치", "리셋" if detected else "유지")
+                c3.metric("고착 단계", STAGE_KO.get(stage, stage))
+                c4.metric("권장 조치", "리셋" if detected else "유지")
 
                 render_score_bar(score)
                 render_risk_structure(signals)
-
-                if detected:
-                    st.warning("👉 이 판단은 확신, 편향, 또는 기억 고착이 개입된 상태였습니다.")
-                else:
-                    st.success("👉 이 판단은 현재 고착되지 않은 상태입니다.")
-                    st.caption("현재 확인이 유지되고 있고, 단일 결론으로 급히 닫히는 구조가 강하지 않습니다.")
+                render_stage_message(stage, reset_mode=False)
 
                 with st.expander("상세 데이터"):
                     st.json(data)
@@ -445,28 +466,23 @@ if run_analyze or run_reset:
             if run_reset:
                 score = data.get("fixation_score", 0.0)
                 detected = data.get("fixation_detected", False)
+                stage = data.get("fixation_stage", "none")
                 signals = data.get("detected_signals", [])
                 baseline_reset = data.get("baseline_reset", {})
                 release_protection = data.get("release_protection", {})
                 scenarios = normalize_scenarios(data)
                 response_mode = data.get("response_mode", "unknown")
 
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
                 c1.metric("고착 감지", "감지됨" if detected else "정상")
                 c2.metric("고착 점수", f"{score:.2f}")
-                c3.metric("개입 여부", "리셋 적용" if detected else "유지")
+                c3.metric("고착 단계", STAGE_KO.get(stage, stage))
+                c4.metric("개입 여부", "리셋 적용" if detected else "유지")
 
                 render_score_bar(score)
-
-                mode_map = {
-                    "expand": "확장 응답",
-                    "guide": "유도 응답",
-                    "step_back": "후퇴",
-                    "close": "응답 종료",
-                }
-                st.markdown(f"### 🧭 응대 모드: {mode_map.get(response_mode, response_mode)}")
-
+                st.markdown(f"### 🧭 응대 모드: {MODE_KO.get(response_mode, response_mode)}")
                 render_risk_structure(signals)
+                render_stage_message(stage, reset_mode=True)
 
                 st.markdown("### 🔄 판단 변화")
 
@@ -553,7 +569,7 @@ st.divider()
 st.markdown(
     """
 <p style='color:#3a3a5a; font-size:0.78rem; text-align:center; font-family:"IBM Plex Mono", monospace;'>
-Decision Reset API — fixation detection · response mode routing · scenario-based reconstruction
+Decision Reset API — fixation detection · fixation stage · response mode routing · scenario-based reconstruction
 </p>
 """,
     unsafe_allow_html=True,
