@@ -365,25 +365,25 @@ with st.sidebar:
 st.markdown("# Decision Reset")
 st.markdown(
     "<p style='color:#6b6b8a; margin-top:-0.5rem; margin-bottom:1.5rem; font-size:0.95rem;'>"
-    "고착된 판단을 감지하고, 복수의 판단 경로를 이유와 조건과 함께 제시합니다"
+    "고착된 판단을 감지하고, 상황에 따라 확장·유도·후퇴·종료를 결정합니다"
     "</p>",
     unsafe_allow_html=True,
 )
 
 default_text = st.session_state.get("example_text", "")
 
-st.info("확신하거나 단정적인 문장을 입력해보세요")
+st.info("확신하거나 단정적인 문장, 또는 열린 질문을 입력해보세요")
 
 input_text = st.text_area(
-    "판단 또는 주장을 입력하세요",
+    "판단 또는 질문을 입력하세요",
     value=default_text,
     height=110,
-    placeholder="예: 이 종목은 무조건 오른다",
+    placeholder="예: 이 종목은 무조건 오른다 / 삶이란 무엇일까?",
 )
 
 col1, col2 = st.columns(2)
 run_analyze = col1.button("🔍 문제 보기", use_container_width=True)
-run_reset = col2.button("🧠 판단 리셋", type="primary", use_container_width=True)
+run_reset = col2.button("🧠 응대 보기", type="primary", use_container_width=True)
 
 # ── 실행 ─────────────────────────────────────────────────────────────────────
 if run_analyze or run_reset:
@@ -449,6 +449,7 @@ if run_analyze or run_reset:
                 baseline_reset = data.get("baseline_reset", {})
                 release_protection = data.get("release_protection", {})
                 scenarios = normalize_scenarios(data)
+                response_mode = data.get("response_mode", "unknown")
 
                 c1, c2, c3 = st.columns(3)
                 c1.metric("고착 감지", "감지됨" if detected else "정상")
@@ -456,24 +457,70 @@ if run_analyze or run_reset:
                 c3.metric("개입 여부", "리셋 적용" if detected else "유지")
 
                 render_score_bar(score)
+
+                mode_map = {
+                    "expand": "확장 응답",
+                    "guide": "유도 응답",
+                    "step_back": "후퇴",
+                    "close": "응답 종료",
+                }
+                st.markdown(f"### 🧭 응대 모드: {mode_map.get(response_mode, response_mode)}")
+
                 render_risk_structure(signals)
 
                 st.markdown("### 🔄 판단 변화")
 
-                if detected:
-                    st.warning("👉 이 판단은 현재보다 과거 기억, 편향, 또는 단정적 결론이 먼저 작동한 상태였습니다.")
-                else:
-                    st.success("👉 이 판단은 현재 고착되지 않은 상태입니다. 그래도 복수 경로를 비교해볼 수 있습니다.")
-                    st.caption("현재 확인을 우선하면서도 다른 선택 경로를 함께 검토할 수 있습니다.")
+                if response_mode == "close":
+                    st.error("👉 지금은 생산적인 대화가 어렵다고 판단합니다. 여기서 응답을 멈춥니다.")
+                    st.caption("공격적이거나 소모적인 상태에서는 더 응답하지 않는 것이 더 이롭습니다.")
 
-                st.markdown("### 🧠 재구성된 판단 경로")
-                st.caption("아래 경로들은 서로 다른 판단 기준을 반영합니다. 어떤 경로를 선택할지는 당신의 우선순위와 조건에 따라 달라집니다.")
+                elif response_mode == "step_back":
+                    st.warning("👉 지금은 더 설명하기보다 잠시 물러서는 편이 좋습니다.")
+                    st.info(
+                        "1. 현재 확인 가능한 사실만 따로 적어보세요\n"
+                        "2. 과거 인상이나 감정을 잠시 보류하세요\n"
+                        "3. 결론은 나중에 다시 보세요"
+                    )
 
-                if scenarios:
-                    for scenario in scenarios:
-                        render_scenario_card(scenario)
-                else:
-                    st.info("표시할 판단 경로가 없습니다.")
+                elif response_mode == "expand":
+                    st.success("👉 이 질문은 닫힌 판단이 아니라 열린 탐구에 가깝습니다.")
+                    st.caption("정답을 고정하기보다 다양한 관점을 함께 비춰보는 방식이 적절합니다.")
+
+                    if scenarios:
+                        st.markdown("### 🧠 다양한 관점")
+                        for scenario in scenarios:
+                            render_scenario_card(scenario)
+                    else:
+                        st.info("표시할 관점이 없습니다.")
+
+                else:  # guide
+                    if detected:
+                        st.warning("👉 이 판단은 확신, 편향, 또는 기억 고착이 개입된 상태였습니다.")
+                    else:
+                        st.success("👉 이 판단은 현재 고착되지 않은 상태입니다. 그래도 복수 경로를 비교해볼 수 있습니다.")
+
+                    st.markdown("### 🧠 재구성된 판단 경로")
+                    st.caption("아래 경로들은 서로 다른 판단 기준을 반영합니다. 어떤 경로를 선택할지는 당신의 우선순위와 조건에 따라 달라집니다.")
+
+                    if scenarios:
+                        for scenario in scenarios:
+                            render_scenario_card(scenario)
+                    else:
+                        st.info("표시할 판단 경로가 없습니다.")
+
+                if response_mode in ["guide", "expand"]:
+                    st.markdown("### 👇 당신이 확신하는 다른 생각도 테스트해보세요")
+                    cols = st.columns(len(FOLLOWUPS))
+                    for idx, text in enumerate(FOLLOWUPS):
+                        if cols[idx].button(text, key=f"followup_{idx}", use_container_width=True):
+                            st.session_state["example_text"] = text
+                            st.rerun()
+
+                elif response_mode == "step_back":
+                    st.markdown("### 👇 지금은 새 결론보다 현재 사실을 다시 적어보는 편이 좋습니다")
+
+                elif response_mode == "close":
+                    st.caption("현재 상태에서는 추가 입력보다 대화를 멈추는 것이 적절합니다.")
 
                 if detected:
                     with st.expander("개입 구조 보기"):
@@ -498,13 +545,6 @@ if run_analyze or run_reset:
                                     unsafe_allow_html=True,
                                 )
 
-                st.markdown("### 👇 당신이 확신하는 다른 생각도 테스트해보세요")
-                cols = st.columns(len(FOLLOWUPS))
-                for idx, text in enumerate(FOLLOWUPS):
-                    if cols[idx].button(text, key=f"followup_{idx}", use_container_width=True):
-                        st.session_state["example_text"] = text
-                        st.rerun()
-
                 with st.expander("전체 JSON"):
                     st.json(data)
 
@@ -513,7 +553,7 @@ st.divider()
 st.markdown(
     """
 <p style='color:#3a3a5a; font-size:0.78rem; text-align:center; font-family:"IBM Plex Mono", monospace;'>
-Decision Reset API — fixation detection · current-first review · scenario-based reconstruction
+Decision Reset API — fixation detection · response mode routing · scenario-based reconstruction
 </p>
 """,
     unsafe_allow_html=True,
