@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.schemas import AnalyzeRequest, AnalyzeResponse
-from app.services.fixation_detector import detect_fixation
+from app.services.fixation_detector import detect_fixation_with_stage
 from app.services.seed_builder import build_seed
 from app.services.logger import append_log
 
@@ -13,10 +13,14 @@ router = APIRouter(prefix="/v1", tags=["analyze"])
 @router.post("/analyze", response_model=AnalyzeResponse)
 def analyze_judgment(request: AnalyzeRequest) -> AnalyzeResponse:
     # 1) 고착 탐지
-    fixation_score, signals = detect_fixation(request.input_text)
+    fixation_score, signals, fixation_stage = detect_fixation_with_stage(request.input_text)
 
     # 2) 고착 여부 판정
-    fixation_detected = fixation_score >= 0.45
+    fixation_detected = (
+    fixation_score >= 0.35
+    or "single_path_judgment" in signals
+    or "lack_of_alternatives" in signals
+)
     intervention_triggered = fixation_detected
     intervention_mode = "reset" if fixation_detected else "keep"
 
@@ -41,6 +45,7 @@ def analyze_judgment(request: AnalyzeRequest) -> AnalyzeResponse:
     return AnalyzeResponse(
         fixation_detected=fixation_detected,
         fixation_score=fixation_score,
+        fixation_stage=fixation_stage,
         intervention_triggered=intervention_triggered,
         intervention_mode=intervention_mode,
         signals=signals,

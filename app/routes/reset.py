@@ -8,7 +8,8 @@ from app.schemas import (
     BaselineReset,
     ReleaseProtection,
 )
-from app.services.fixation_detector import detect_fixation
+from app.services.fixation_detector import detect_fixation_with_stage
+from app.services.response_mode import classify_response_mode
 from app.services.seed_builder import build_seed
 from app.services.reconstruction import get_scenarios, get_outputs_from_scenarios
 from app.services.logger import append_log
@@ -19,33 +20,46 @@ router = APIRouter(prefix="/v1", tags=["reset"])
 @router.post("/reset", response_model=ResetResponse)
 def reset_judgment(request: ResetRequest) -> ResetResponse:
     # 1) 고착 탐지
-    fixation_score, detected_signals = detect_fixation(request.input_text)
+    fixation_score, detected_signals, fixation_stage = detect_fixation_with_stage(request.input_text)
 
-    # 고착 여부 기준
-    fixation_detected = fixation_score >= 0.45
+    # 2) 고착 여부
+    fixation_detected = (
+        fixation_score >= 0.35
+        or "single_path_judgment" in detected_signals
+        or "lack_of_alternatives" in detected_signals
+    )
+
+    # 3) 응대 모드 분류
+    response_mode = classify_response_mode(
+        text=request.input_text,
+        fixation_score=fixation_score,
+        detected_signals=detected_signals,
+    )
+
+    # 4) 개입 여부
     intervention_triggered = fixation_detected
+    intervention_mode = request.mode.value
 
-    # 2) seed 생성
+    # 5) seed 생성
     seed = build_seed(request.input_text, request.domain)
 
-    # 3) baseline reset 상태
+    # 6) baseline reset
     baseline_reset = BaselineReset(
         applied=intervention_triggered,
         dependency_cut=intervention_triggered,
         neutral_state_transition=intervention_triggered,
     )
 
-    # 4) 시나리오 생성
+    # 7) 시나리오 생성
     scenarios = get_scenarios(
         domain=request.domain.value,
         input_text=request.input_text,
         detected_signals=detected_signals,
     )
 
-    # 하위 호환용 요약 출력
     outputs = get_outputs_from_scenarios(scenarios)
 
-    # 5) release protection
+    # 8) release protection
     if intervention_triggered:
         release_protection = ReleaseProtection(
             enabled=True,
@@ -63,7 +77,7 @@ def reset_judgment(request: ResetRequest) -> ResetResponse:
             anti_reuse_rules=[],
         )
 
-    # 6) 로그
+    # 9) 로그 저장
     append_log(
         {
             "endpoint": "reset",
@@ -73,19 +87,23 @@ def reset_judgment(request: ResetRequest) -> ResetResponse:
             "mode": request.mode.value,
             "fixation_detected": fixation_detected,
             "fixation_score": fixation_score,
+            "fixation_stage": fixation_stage,
             "detected_signals": detected_signals,
             "intervention_triggered": intervention_triggered,
+            "response_mode": response_mode,
             "scenario_count": len(scenarios),
             "llm_polish_applied": False,
         }
     )
 
-    # 7) 응답
+    # 10) 응답
     return ResetResponse(
         fixation_detected=fixation_detected,
         fixation_score=fixation_score,
+        fixation_stage=fixation_stage,
         intervention_triggered=intervention_triggered,
-        intervention_mode=request.mode.value,
+        intervention_mode=intervention_mode,
+        response_mode=response_mode,
         baseline_reset=baseline_reset,
         detected_signals=detected_signals,
         seed=seed,
