@@ -4,6 +4,7 @@ from enum import Enum
 from typing import List, Literal
 
 from pydantic import BaseModel, Field
+response_mode: str
 
 
 class SourceType(str, Enum):
