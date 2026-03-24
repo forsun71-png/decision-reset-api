@@ -6,8 +6,6 @@ from typing import List, Literal
 from pydantic import BaseModel, Field
 
 
-# ── ENUMS ────────────────────────────────────────────────────────────────────
-
 class SourceType(str, Enum):
     user = "user"
     external_ai = "external_ai"
@@ -27,34 +25,18 @@ class ResetMode(str, Enum):
     soft = "soft"
 
 
-# ── REQUEST ──────────────────────────────────────────────────────────────────
-
-class AnalyzeResponse(BaseModel):
-    fixation_detected: bool
-    fixation_score: float
-    fixation_stage: str
-    intervention_triggered: bool
-    intervention_mode: Literal["keep", "reset"]
-    signals: List[str]
-    seed: dict
-
-class ResetResponse(BaseModel):
-    fixation_detected: bool
-    fixation_score: float
-    fixation_stage: str
-    intervention_triggered: bool
-    intervention_mode: str
-    response_mode: str
-    baseline_reset: BaselineReset
-    detected_signals: List[str]
-    seed: dict
-    outputs: List[str]
-    scenarios: List[dict]
-    release_protection: ReleaseProtection
-    llm_polish_applied: bool
+class AnalyzeRequest(BaseModel):
+    input_text: str = Field(..., min_length=1, max_length=4000)
+    source_type: SourceType = SourceType.user
+    domain: DomainType = DomainType.general
 
 
-# ── RESPONSE ─────────────────────────────────────────────────────────────────
+class ResetRequest(BaseModel):
+    input_text: str = Field(..., min_length=1, max_length=4000)
+    source_type: SourceType = SourceType.user
+    domain: DomainType = DomainType.general
+    mode: ResetMode = ResetMode.strict
+
 
 class AnalyzeResponse(BaseModel):
     fixation_detected: bool
@@ -81,29 +63,14 @@ class ReleaseProtection(BaseModel):
 class ResetResponse(BaseModel):
     fixation_detected: bool
     fixation_score: float
-
-    # 개입 여부
+    fixation_stage: str
     intervention_triggered: bool
     intervention_mode: str
-
-    # 🔥 핵심 추가
-    response_mode: str  # expand / guide / step_back / close
-
-    # 구조 정보
+    response_mode: str
     baseline_reset: BaselineReset
     detected_signals: List[str]
-
-    # 내부 상태
     seed: dict
-
-    # 하위 호환 출력
     outputs: List[str]
-
-    # 🔥 핵심 출력
     scenarios: List[dict]
-
-    # 보호 구조
     release_protection: ReleaseProtection
-
-    # 확장 가능성
     llm_polish_applied: bool
